@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="es" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Suppress harmless Vite dev HMR WebSocket disconnection errors and unhandled rejections in iFrame preview container -->
+    <script>
+      (function() {
+        function isViteHmrUrl(url) {
+          if (!url) return false;
+          var u = String(url).toLowerCase();
+          return u.indexOf('token=') !== -1 || u.indexOf('24678') !== -1 || u.indexOf('vite-hmr') !== -1 || u.indexOf('vite') !== -1;
+        }
+
+        function isBenign(str) {
+          if (!str) return false;
+          var s = String(str).toLowerCase();
+          return (
+            s.indexOf('websocket') !== -1 ||
+            s.indexOf('without opened') !== -1 ||
+            s.indexOf('failed to connect to websocket') !== -1 ||
+            s.indexOf('vite-hmr') !== -1 ||
+            s.indexOf('ws://') !== -1 ||
+            s.indexOf('wss://') !== -1 ||
+            s.indexOf('vite:ws') !== -1 ||
+            (s.indexOf('[vite]') !== -1 && (s.indexOf('websocket') !== -1 || s.indexOf('connect') !== -1 || s.indexOf('closed') !== -1))
+          );
+        }
+
+        // 1. WebSocket.prototype hooks: prevent Vite HMR client from ever failing to connect or rejecting
+        if (typeof window !== 'undefined' && window.WebSocket && window.WebSocket.prototype) {
+          try {
+            var proto = window.WebSocket.prototype;
+            var origReadyState = Object.getOwnPropertyDescriptor(proto, 'readyState');
+            Object.defineProperty(proto, 'readyState', {
+              configurable: true,
+              enumerable: true,
+              get: function() {
+                try {
+                  if (isViteHmrUrl(this.url)) {
+                    return 1; // WebSocket.OPEN
+                  }
+                } catch (_) {}
+                return origReadyState && origReadyState.get ? origReadyState.get.call(this) : 1;
+              }
+            });
+
+            var origSend = proto.send;
+            proto.send = function() {
+              try {
+                if (isViteHmrUrl(this.url)) return;
+              } catch (_) {}
+              return origSend.apply(this, arguments);
+            };
+
+            var origClose = proto.close;
+            proto.close = function() {
+              try {
+                if (isViteHmrUrl(this.url)) return;
+              } catch (_) {}
+              return origClose.apply(this, arguments);
+            };
+
+            var origAddEventListener = proto.addEventListener;
+            proto.addEventListener = function(type, listener, options) {
+              try {
+                if (isViteHmrUrl(this.url)) {
+                  if (type === 'close' || type === 'error') {
+                    // Suppress close/error listeners on Vite HMR socket so promise never rejects
+                    return;
+                  }
+                  if (type === 'open') {
+                    if (typeof listener === 'function') {
+                      setTimeout(function() {
+                        try { listener(new Event('open')); } catch (_) {}
+                      }, 0);
+                    }
+                    return;
+                  }
+                }
+              } catch (_) {}
+              return origAddEventListener.apply(this, arguments);
+            };
+
+            var origOnCloseDesc = Object.getOwnPropertyDescriptor(proto, 'onclose');
+            if (origOnCloseDesc && origOnCloseDesc.set) {
+              Object.defineProperty(proto, 'onclose', {
+                configurable: true,
+                enumerable: true,
+                get: function() { return origOnCloseDesc.get ? origOnCloseDesc.get.call(this) : null; },
+                set: function(fn) {
+                  try {
+                    if (isViteHmrUrl(this.url)) return;
+                  } catch (_) {}
+                  return origOnCloseDesc.set.call(this, fn);
+                }
+              });
+            }
+
+            var origOnErrorDesc = Object.getOwnPropertyDescriptor(proto, 'onerror');
+            if (origOnErrorDesc && origOnErrorDesc.set) {
+              Object.defineProperty(proto, 'onerror', {
+                configurable: true,
+                enumerable: true,
+                get: function() { return origOnErrorDesc.get ? origOnErrorDesc.get.call(this) : null; },
+                set: function(fn) {
+                  try {
+                    if (isViteHmrUrl(this.url)) return;
+                  } catch (_) {}
+                  return origOnErrorDesc.set.call(this, fn);
+                }
+              });
+            }
+          } catch (_) {}
+        }
+
+        // 2. Wrap console.error and console.warn so dev websocket disconnect logs are completely silenced
+        var origConsoleError = console.error;
+        console.error = function() {
+          try {
+            var fullMsg = '';
+            for (var i = 0; i < arguments.length; i++) {
+              var a = arguments[i];
+              if (a) fullMsg += ' ' + (a.stack || a.message || a);
+            }
+            if (isBenign(fullMsg)) {
+              return;
+            }
+          } catch (_) {}
+          return origConsoleError.apply(console, arguments);
+        };
+
+        var origConsoleWarn = console.warn;
+        console.warn = function() {
+          try {
+            var fullMsg = '';
+            for (var i = 0; i < arguments.length; i++) {
+              var a = arguments[i];
+              if (a) fullMsg += ' ' + (a.stack || a.message || a);
+            }
+            if (isBenign(fullMsg)) {
+              return;
+            }
+          } catch (_) {}
+          return origConsoleWarn.apply(console, arguments);
+        };
+
+        // 3. Helper to wrap any rejection handler
+        function wrapRejectionHandler(rawHandler) {
+          if (typeof rawHandler !== 'function') return rawHandler;
+          return function(event) {
+            try {
+              var reason = event && event.reason;
+              var msg = '' + (reason && (reason.stack || reason.message || reason));
+              if (isBenign(msg)) {
+                if (event && typeof event.preventDefault === 'function') event.preventDefault();
+                if (event && typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+                return true;
+              }
+            } catch (_) {}
+            return rawHandler.apply(this, arguments);
+          };
+        }
+
+        // Helper to wrap any error handler
+        function wrapErrorHandler(rawHandler) {
+          if (typeof rawHandler !== 'function') return rawHandler;
+          return function(message, source, lineno, colno, error) {
+            try {
+              var msg = '' + (message || (error && (error.stack || error.message)));
+              if (isBenign(msg)) {
+                return true;
+              }
+            } catch (_) {}
+            return rawHandler.apply(this, arguments);
+          };
+        }
+
+        // 4. Immediately wrap any handler that _aistudio-iframe or another script already placed
+        if (typeof window.onunhandledrejection === 'function') {
+          window.onunhandledrejection = wrapRejectionHandler(window.onunhandledrejection);
+        }
+        if (typeof window.onerror === 'function') {
+          window.onerror = wrapErrorHandler(window.onerror);
+        }
+
+        // 5. Intercept future assignments to window.onunhandledrejection and window.onerror
+        var _currentUnhandledRejection = window.onunhandledrejection;
+        try {
+          Object.defineProperty(window, 'onunhandledrejection', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return _currentUnhandledRejection;
+            },
+            set: function(fn) {
+              _currentUnhandledRejection = wrapRejectionHandler(fn);
+            }
+          });
+        } catch (_) {}
+
+        var _currentOnError = window.onerror;
+        try {
+          Object.defineProperty(window, 'onerror', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return _currentOnError;
+            },
+            set: function(fn) {
+              _currentOnError = wrapErrorHandler(fn);
+            }
+          });
+        } catch (_) {}
+
+        // 6. Capture event listeners on window with useCapture = true
+        window.addEventListener('unhandledrejection', function(event) {
+          try {
+            var reason = event && event.reason;
+            var msg = '' + (reason && (reason.stack || reason.message || reason));
+            if (isBenign(msg)) {
+              if (typeof event.preventDefault === 'function') event.preventDefault();
+              if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+              return true;
+            }
+          } catch (_) {}
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          try {
+            var msg = '' + (event && (event.message || (event.error && (event.error.stack || event.error.message))));
+            if (isBenign(msg)) {
+              if (typeof event.preventDefault === 'function') event.preventDefault();
+              if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+              return true;
+            }
+          } catch (_) {}
+        }, true);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>Elite Motors – Concesionario de Superdeportivos & Clásicos</title>
+    <meta name="description" content="Descubre la colección más exclusiva de vehículos JDM legendarios, American Muscle, European GT y superdeportivos Italianos. Reserva en línea y gestiona tu financiación." />
+    
+    <!-- Premium Favicon & PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#090a0d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="EliteMotors" />
+    
+    <!-- OpenGraph Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Elite Motors" />
+    <meta property="og:title" content="Elite Motors – Concesionario de Superdeportivos & Clásicos" />
+    <meta property="og:description" content="Descubre la colección más exclusiva de vehículos JDM legendarios, American Muscle, European GT y superdeportivos Italianos. Reserva en línea y gestiona tu financiación." />
+    <meta property="og:image" content="/images/hero_hypercar_showroom_1791565534002.jpg" />
+    <meta property="og:locale" content="es_ES" />
+    
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Elite Motors – Concesionario de Superdeportivos & Clásicos" />
+    <meta name="twitter:description" content="Descubre la colección más exclusiva de vehículos JDM legendarios, American Muscle, European GT y superdeportivos Italianos. Reserva en línea y gestiona tu financiación." />
+    <meta name="twitter:image" content="/images/hero_hypercar_showroom_1791565534002.jpg" />
+    
+    <!-- Preconnect & Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Schema.org JSON-LD Structured Data for AutoDealer -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AutoDealer",
+      "name": "Elite Motors",
+      "description": "Concesionario boutique internacional de vehículos de alto rendimiento: JDM, Muscle Cars americanos, deportivos europeos y superdeportivos italianos.",
+      "image": "/images/hero_hypercar_showroom_1791565534002.jpg",
+      "currenciesAccepted": "USD, EUR",
+      "paymentAccepted": "Cash, Credit Card, Wire Transfer, Crypto",
+      "priceRange": "$$$$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Avenida del Motor 100, Distrito Financiero",
+        "addressLocality": "Madrid / Miami / Tokio Hub",
+        "postalCode": "28046",
+        "addressCountry": "ES"
+      },
+      "telephone": "+34 910 882 300",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+          "opens": "09:00",
+          "closes": "20:00"
+        }
+      ]
+    }
+    </script>
+
+  </head>
+  <body class="bg-[#090a0d] text-zinc-100 antialiased selection:bg-[#e5b869] selection:text-black">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

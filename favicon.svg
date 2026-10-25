@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141720" />
+      <stop offset="50%" stop-color="#090a0f" />
+      <stop offset="100%" stop-color="#030406" />
+    </linearGradient>
+
+    <!-- Metallic Gold Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf3cd" />
+      <stop offset="25%" stop-color="#e5b869" />
+      <stop offset="60%" stop-color="#b8860b" />
+      <stop offset="85%" stop-color="#e5b869" />
+      <stop offset="100%" stop-color="#8a6108" />
+    </linearGradient>
+
+    <!-- Specular Highlight -->
+    <linearGradient id="specularGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Outer Shield / Hexagonal Emblem -->
+  <polygon
+    points="64,6 118,24 104,96 64,122 24,96 10,24"
+    fill="url(#bgGrad)"
+    stroke="url(#goldGrad)"
+    stroke-width="4"
+    stroke-linejoin="round"
+  />
+
+  <!-- Inner Inset Shield Outline -->
+  <polygon
+    points="64,13 111,29 98,92 64,115 30,92 17,29"
+    fill="none"
+    stroke="url(#goldGrad)"
+    stroke-width="1.5"
+    stroke-opacity="0.6"
+  />
+
+  <!-- Top Glass Highlight -->
+  <polygon
+    points="64,13 111,29 104,60 64,55 24,60 17,29"
+    fill="url(#specularGrad)"
+  />
+
+  <!-- Automotive Winged Aerodynamic V-Shape -->
+  <path
+    d="M 28,42 L 64,58 L 100,42 L 88,48 L 64,62 L 40,48 Z"
+    fill="url(#goldGrad)"
+    filter="url(#goldGlow)"
+  />
+
+  <!-- Interlocking "E" and "M" Monogram -->
+  <!-- Left Wing "E" -->
+  <path
+    d="M 38,52 L 56,52 L 56,57 L 44,57 L 44,65 L 53,65 L 53,70 L 44,70 L 44,80 L 57,80 L 57,85 L 38,85 Z"
+    fill="url(#goldGrad)"
+  />
+
+  <!-- Right Wing "M" -->
+  <path
+    d="M 59,52 L 67,52 L 77,72 L 87,52 L 95,52 L 95,85 L 89,85 L 89,63 L 80,81 L 74,81 L 65,63 L 65,85 L 59,85 Z"
+    fill="url(#goldGrad)"
+  />
+
+  <!-- Lower Diamond Accent -->
+  <polygon
+    points="64,96 70,102 64,108 58,102"
+    fill="url(#goldGrad)"
+  />
+</svg>

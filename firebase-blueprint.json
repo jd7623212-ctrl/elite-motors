@@ -1,0 +1,197 @@
+{
+  "entities": {
+    "CarDoc": {
+      "title": "CarDoc",
+      "description": "Registro de vehículo en el catálogo de Elite Motors",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID del vehículo"
+        },
+        "name": {
+          "type": "string",
+          "description": "Nombre completo"
+        },
+        "brand": {
+          "type": "string",
+          "description": "Marca"
+        },
+        "price": {
+          "type": "number",
+          "description": "Precio en USD"
+        },
+        "year": {
+          "type": "number",
+          "description": "Año"
+        },
+        "vin": {
+          "type": "string",
+          "description": "Número de bastidor"
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Disponibilidad"
+        }
+      },
+      "required": ["id", "name", "brand", "price", "year", "vin"]
+    },
+    "UserDoc": {
+      "title": "UserDoc",
+      "description": "Perfil de cliente o comprador VIP",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Identificador único de usuario o cliente"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Nombre completo"
+        },
+        "email": {
+          "type": "string",
+          "description": "Correo electrónico"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Teléfono de contacto"
+        },
+        "tier": {
+          "type": "string",
+          "description": "Nivel de cliente (VIP, Platinum)"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Fecha de actualización"
+        }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "InvoiceDoc": {
+      "title": "InvoiceDoc",
+      "description": "Factura oficial y expediente de compra en Firestore",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de la factura"
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "description": "Número de factura correlativo"
+        },
+        "date": {
+          "type": "string",
+          "description": "Fecha de emisión"
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Fecha de vencimiento"
+        },
+        "buyerName": {
+          "type": "string",
+          "description": "Nombre del comprador"
+        },
+        "buyerDoc": {
+          "type": "string",
+          "description": "Documento o Tax ID del comprador"
+        },
+        "buyerEmail": {
+          "type": "string",
+          "description": "Email del comprador"
+        },
+        "buyerAddress": {
+          "type": "string",
+          "description": "Dirección fiscal del comprador"
+        },
+        "carName": {
+          "type": "string",
+          "description": "Nombre del coche"
+        },
+        "carVin": {
+          "type": "string",
+          "description": "VIN del vehículo"
+        },
+        "carBrand": {
+          "type": "string",
+          "description": "Marca"
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "Precio total"
+        },
+        "depositPaid": {
+          "type": "number",
+          "description": "Señal abonada"
+        },
+        "balanceDue": {
+          "type": "number",
+          "description": "Saldo pendiente"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Método de pago"
+        },
+        "taxAmount": {
+          "type": "number",
+          "description": "Monto de impuestos"
+        },
+        "status": {
+          "type": "string",
+          "description": "Estado del documento"
+        }
+      },
+      "required": [
+        "id",
+        "invoiceNumber",
+        "buyerName",
+        "carName",
+        "carVin",
+        "totalPrice",
+        "depositPaid",
+        "balanceDue",
+        "paymentMethod"
+      ]
+    },
+    "BuyerOrder": {
+      "title": "BuyerOrder",
+      "description": "Registro oficial de compra y evaluación de comprador",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "carId": { "type": "string" },
+        "carName": { "type": "string" },
+        "carBrand": { "type": "string" },
+        "carPrice": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "reservationCode": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "buyerEvaluationStatus": { "type": "string" }
+      },
+      "required": ["orderId", "customerName", "carName", "carPrice", "depositAmount"]
+    }
+  },
+  "firestore": {
+    "/cars/{carId}": {
+      "schema": "CarDoc",
+      "description": "Colección de vehículos disponibles y catálogo"
+    },
+    "/users/{userId}": {
+      "schema": "UserDoc",
+      "description": "Colección de clientes y compradores registrados"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "InvoiceDoc",
+      "description": "Colección de facturas oficiales y proformas gestionadas por el usuario"
+    },
+    "/orders/{orderId}": {
+      "schema": "BuyerOrder",
+      "description": "Colección de órdenes para evaluación fiduciaria en Firebase Studios"
+    }
+  }
+}

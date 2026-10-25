@@ -1,0 +1,8 @@
+{
+  "name": "Elite Motors – Concesionario de Superdeportivos & Clásicos",
+  "description": "Descubre la colección más exclusiva de vehículos JDM legendarios, American Muscle, European GT y superdeportivos Italianos. Reserva en línea y gestiona tu financiación.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
